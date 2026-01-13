@@ -1,3 +1,6 @@
+rm -f .github/workflows/build_swinbrain_sif.yml
+mkdir -p .github/workflows
+
 cat > .github/workflows/build_swinbrain_sif.yml <<'YML'
 name: Build SwinBrain SIF
 
@@ -8,12 +11,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install Apptainer
         run: |
           sudo apt-get update
-          sudo apt-get install -y apptainer
+          sudo apt-get install -y uidmap squashfs-tools cryptsetup runc curl
+
+          curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | sudo bash -s - /usr/local
+
+          apptainer version
 
       - name: Build SIF
         run: |
