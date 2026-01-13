@@ -1,31 +1,37 @@
-name: Build SIF from GHCR image
+name: build-sif
 
 on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  packages: read
+  workflow_dispatch: {}
 
 jobs:
   sif:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install SingularityCE
+      - name: Free disk space
         run: |
-          sudo apt-get update
-          sudo apt-get install -y singularity-container
+          docker system prune -af || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/local/lib/android || true
+          df -h
 
-      - name: Build SIF from docker:// image
-        env:
-          OWNER: ${{ github.repository_owner }}
+      - name: Build SIF using SingularityCE container
         run: |
-          singularity build swinbrain.sif docker://ghcr.io/${OWNER}/swinbrain:latest
+          set -euo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            -v "$PWD":/work \
+            -w /work \
+            quay.io/singularity/singularity:v3.11.4 \
+            -lc 'singularity --version && singularity build swinbrain_latest.sif docker://ghcr.io/${{ github.repository_owner }}/swinbrain:latest'
 
-      - name: Upload artifact
+      - name: Upload SIF artifact
         uses: actions/upload-artifact@v4
         with:
-          name: swinbrain-sif
-          path: swinbrain.sif
+          name: swinbrain_latest_sif
+          path: swinbrain_latest.sif
