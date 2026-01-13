@@ -1,0 +1,7 @@
+
+# model weights / artifacts
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.sif
