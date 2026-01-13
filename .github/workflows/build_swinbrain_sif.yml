@@ -1,0 +1,36 @@
+name: Build SwinBrain SIF
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Apptainer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apptainer
+
+      - name: Build SIF
+        run: |
+          apptainer build swinbrain.sif containers/swinbrain.def
+
+      - name: Smoke test (imports + numpy)
+        run: |
+          apptainer exec swinbrain.sif python - << 'PY'
+          import numpy as np
+          import torch
+          print("NumPy:", np.__version__)
+          print("Torch:", torch.__version__)
+          PY
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: swinbrain-sif
+          path: swinbrain.sif
+
