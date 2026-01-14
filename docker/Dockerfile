@@ -1,33 +1,34 @@
-# Keep the same style as comical: NVIDIA pytorch base
-FROM nvcr.io/nvidia/pytorch:23.10-py3
+# GPU-ready base (CUDA 11.8 + PyTorch)
+FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
 
-# Same “clean pip” environment pattern
 ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# OS deps (minimal, but enough for common wheels + nibabel/image stuff)
+# System deps (keep minimal; add only if you actually need compilers)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      git ca-certificates curl \
+      git ca-certificates \
       libglib2.0-0 libsm6 libxext6 libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade build tooling (very similar to typical comical setup)
-RUN python -m pip install --upgrade pip setuptools wheel
+WORKDIR /app
 
-# Critical: avoid numpy 2.x issues
-RUN python -m pip install "numpy<2"
+# Copy only dependency file(s) first for better layer caching
+COPY requirements.txt /app/requirements.txt
 
-# Install python requirements (SwinBrain has requirements.txt at repo root)
-COPY requirements.txt /opt/SwinBrain/requirements.txt
-RUN python -m pip install -r /opt/SwinBrain/requirements.txt
+# Install deps
+RUN python -m pip install --no-cache-dir -U pip setuptools wheel \
+ && python -m pip install --no-cache-dir "numpy<2" \
+ && python -m pip install --no-cache-dir -r /app/requirements.txt \
+ && python -m pip install --no-cache-dir --force-reinstall "numpy<2"
 
-# Re-enforce numpy<2 in case requirements pull numpy>=2
-RUN python -m pip install --upgrade --force-reinstall "numpy<2"
+# Now copy the actual code (keeps rebuilds smaller when only code changes)
+COPY . /app
 
-# Default workdir (nice for later)
-WORKDIR /work
+# Quick self-tests
+RUN python -c "import sys; print(sys.version)" \
+ && python -c "import numpy as np; print('numpy', np.__version__)" \
+ && python -c "import torch; print('torch', torch.__version__, 'cuda?', torch.cuda.is_available())"
 
-# A simple default command
-CMD ["python", "-c", "import numpy as np; import torch; print('NumPy', np.__version__); print('Torch', torch.__version__)"]
+CMD ["python", "-c", "import numpy as np, torch; print('NumPy', np.__version__); print('Torch', torch.__version__)"]
