@@ -20,8 +20,8 @@ RUN python -m pip install --upgrade pip setuptools wheel
 RUN python -m pip install "numpy<2"
 
 # Install python requirements (SwinBrain has requirements.txt at repo root)
-COPY requirements.txt /opt/swinbrain/requirements.txt
-RUN python -m pip install -r /opt/swinbrain/requirements.txt
+COPY requirements.txt /opt/SwinBrain/requirements.txt
+RUN python -m pip install -r /opt/SwinBrain/requirements.txt
 
 # Re-enforce numpy<2 in case requirements pull numpy>=2
 RUN python -m pip install --upgrade --force-reinstall "numpy<2"
